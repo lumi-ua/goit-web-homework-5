@@ -1,9 +1,12 @@
+import asyncio
 import platform
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
+import sys
+
 
 import aiohttp
-import asyncio
+
 
 
 async def request(url: str):
@@ -20,8 +23,22 @@ async def request(url: str):
             return None
 
 
-async def get_exchange():
-    result = await request('https://api.privatbank.ua/p24api/exchange_rates?date=01.09.2023')
+def get_date(days: int):
+    date = datetime.now().date()
+    result = (date - timedelta(days=days)).strftime("%d.%m.%Y")
+    return result
+
+async def get_exchange(days: int):
+
+    base = 'https://api.privatbank.ua/p24api/exchange_rates?date='
+    
+    if days > 10:
+        logging.warning("Sorry, the number should not exceed 10, keep today's exchange rate")
+        days  = 0
+
+    d = get_date(days)
+    result = await request(base + d)
+
     usd = None
     eur = None
     if result:
@@ -30,12 +47,26 @@ async def get_exchange():
                 usd = f"USD: sale: {item['saleRate']}, buy: {item['purchaseRate']}"
             elif item["currency"] == "EUR":
                 eur = f"EUR: sale: {item['saleRate']}, buy: {item['purchaseRate']}"
-        return usd, eur    
+        return usd, eur, d
     return "Failed to retrieve data"
 
 
 if __name__ == '__main__':
+    if len(sys.argv) != 2:
+        print("Usage: python script.py <days>")
+        sys.exit(1)
+
+    try:
+        days = int(sys.argv[1])  # Получаем количество дней из аргументов командной строки
+    except ValueError:
+        print("Invalid number of days.")
+        sys.exit(1)
+
+    if days < 1:
+        print("Number of days must be greater than 0.")
+        sys.exit(1)
+
     if platform.system() == 'Windows':
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-    result = asyncio.run(get_exchange())
+    result = asyncio.run(get_exchange(days))
     print(result)
