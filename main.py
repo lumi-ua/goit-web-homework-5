@@ -21,10 +21,16 @@ async def request(url: str):
 
 
 async def get_exchange():
-    result = await request('https://api.privatbank.ua/p24api/exchange_rates?json&date=01.12.2014')
+    result = await request('https://api.privatbank.ua/p24api/exchange_rates?date=01.09.2023')
+    usd = None
+    eur = None
     if result:
-        # exc, = list(filter(lambda el: el["ccy"] == "USD", result))
-        return result #f"USD: buy: {exc['buy']}, sale: {exc['sale']}. Date: {datetime.now().date()}"
+        for item in result["exchangeRate"]:
+            if item["currency"] == "USD":
+                usd = f"USD: sale: {item['saleRate']}, buy: {item['purchaseRate']}"
+            elif item["currency"] == "EUR":
+                eur = f"EUR: sale: {item['saleRate']}, buy: {item['purchaseRate']}"
+        return usd, eur    
     return "Failed to retrieve data"
 
 
